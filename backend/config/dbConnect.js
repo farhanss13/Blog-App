@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
-async function dbConnect() {
+async function dbConnect(dbUrl) {
   try {
-    await mongoose.connect("mongodb://localhost:27017/blogDatabase");
+    await mongoose.connect(dbUrl);
     console.log("DB Connected Successfully")
   } catch (error) {
     console.log(error)
