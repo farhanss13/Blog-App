@@ -1,6 +1,8 @@
 const User = require("../models/userSchema");
 const bcrypt = require("bcrypt");
-const { generateJWT } = require("../utilities/generateToken");  
+const { generateJWT, decodeJWT } = require("../utilities/generateToken");  
+const { uploadImage, deleteImagefromCloudinary } = require("../utilities/uploadimage");
+const fs = require("fs");
 
 async function createUser(req, res) {
   const { name, email, password } = req.body;
@@ -34,6 +36,7 @@ async function createUser(req, res) {
         id: newUser._id,
         name: newUser.name,
         email: newUser.email,
+        avatar: newUser.avatar,
       },
       token,  
     });
@@ -74,8 +77,10 @@ async function login(req, res) {
       success: true,
       message: "Logged in successfully",
       user: {
+        id: user._id,
         name: user.name,
         email: user.email,
+        avatar: user.avatar,
       },
       token,
     });
@@ -137,6 +142,60 @@ async function updateUser(req, res) {
   }
 }
 
+async function updateProfile(req, res) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ success: false, message: "Please sign in" });
+    }
+    const token = authHeader.split(" ")[1];
+    const decoded = decodeJWT(token);
+    if (!decoded?.id) {
+      return res.status(401).json({ success: false, message: "Invalid token" });
+    }
+
+    const userId = decoded.id;
+    const { name } = req.body;
+    const file = req.file;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      if (file?.path) fs.unlinkSync(file.path);
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (name !== undefined) {
+      user.name = name;
+    }
+
+    if (file) {
+      const { secure_url, public_id } = await uploadImage(file.path);
+      fs.unlinkSync(file.path);
+      if (user.avatarId) {
+        await deleteImagefromCloudinary(user.avatarId);
+      }
+      user.avatar = secure_url;
+      user.avatarId = public_id;
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+}
+
 async function deleteUser(req, res) {
   try {
     const { id } = req.params;
@@ -161,4 +220,5 @@ module.exports = {
   updateUser,
   deleteUser,
   login,
+  updateProfile,
 };

@@ -84,10 +84,19 @@ async function getBlogsById(req, res) {
     let blog = await Blog.findOne({ blogId })
       .populate({
         path: "comments",
-        populate: {
-          path: "user",
-          select: "name email",
-        },
+        populate: [
+          {
+            path: "user",
+            select: "name email",
+          },
+          {
+            path: "parentComment",
+            populate: {
+              path: "user",
+              select: "name email",
+            },
+          },
+        ],
       })
       .populate({
         path: "creator",
@@ -104,10 +113,10 @@ async function updateblog(req, res) {
     const token = authHeader.split(" ")[1];
     const decodedUser = decodeJWT(token);
     const creator = decodedUser.id;
-    const { id } = req.params;
+    const { blogId } = req.params;
     const { title, description, draft } = req.body;
 
-    const blog = await Blog.findById(id);
+    const blog = await Blog.findOne({ blogId });
 
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
@@ -122,6 +131,14 @@ async function updateblog(req, res) {
     if (title !== undefined) blog.title = title;
     if (description !== undefined) blog.description = description;
     if (draft !== undefined) blog.draft = draft;
+
+    if (req.file) {
+      const { secure_url, public_id } = await uploadImage(req.file.path);
+      fs.unlinkSync(req.file.path);
+      await deleteImagefromCloudinary(blog.imageId);
+      blog.image = secure_url;
+      blog.imageId = public_id;
+    }
 
     await blog.save();
 
@@ -139,9 +156,9 @@ async function deleteBlog(req, res) {
     const token = authHeader.split(" ")[1];
     const decodedUser = decodeJWT(token);
     const creator = decodedUser.id;
-    const { id } = req.params;
+    const { blogId } = req.params;
 
-    const blog = await Blog.findById(id);
+    const blog = await Blog.findOne({ blogId });
 
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
@@ -154,9 +171,10 @@ async function deleteBlog(req, res) {
     }
 
     await deleteImagefromCloudinary(blog.imageId);
-    await Blog.findByIdAndDelete(id);
+    await Comment.deleteMany({ blog: blog._id });
+    await Blog.findByIdAndDelete(blog._id);
     await User.findByIdAndUpdate(creator, {
-      $pull: { blogs: id },
+      $pull: { blogs: blog._id },
     });
 
     return res.status(200).json({
@@ -172,20 +190,20 @@ async function likeBlog(req, res) {
     const token = authHeader.split(" ")[1];
     const decodedUser = decodeJWT(token);
     const creator = decodedUser.id;
-    const { id } = req.params;
+    const { blogId } = req.params;
 
-    const blog = await Blog.findById(id);
+    const blog = await Blog.findOne({ blogId });
 
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
     }
     if (!blog.likes.includes(creator)) {
-      await Blog.findByIdAndUpdate(id, { $push: { likes: creator } });
+      await Blog.findByIdAndUpdate(blog._id, { $push: { likes: creator } });
       return res.status(200).json({
         message: "Blog Liked!",
       });
     } else {
-      await Blog.findByIdAndUpdate(id, { $pull: { likes: creator } });
+      await Blog.findByIdAndUpdate(blog._id, { $pull: { likes: creator } });
       return res.status(200).json({
         message: "Blog Disliked!",
       });

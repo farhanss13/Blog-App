@@ -8,19 +8,34 @@ async function addComment(req, res) {
     const token = authHeader.split(" ")[1];
     const decodedUser = decodeJWT(token);
     const creator = decodedUser.id;
-    const { id } = req.params;
-    const { comment } = req.body;
+    const { blogId } = req.params;
+    const { comment, parentCommentId } = req.body;
     if(!comment){
       return res.status(400).json({ message: "Please Enter a Comment!" });
     }
 
-    const blog = await Blog.findById(id);
+    const blog = await Blog.findOne({ blogId });
 
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
     }
-    const newComment = await Comment.create({comment,blog:id,user:creator})
-    await Blog.findByIdAndUpdate(id,{
+
+    if (parentCommentId) {
+      const parent = await Comment.findById(parentCommentId);
+      if (!parent) return res.status(404).json({ message: "Parent comment not found" });
+      if (parent.blog.toString() !== blog._id.toString()) {
+        return res.status(400).json({ message: "Parent comment does not belong to this blog" });
+      }
+    }
+
+    const newComment = await Comment.create({
+      comment,
+      blog: blog._id,
+      user: creator,
+      parentComment: parentCommentId || null,
+    });
+
+    await Blog.findByIdAndUpdate(blog._id,{
       $push:{comments: newComment._id}
     })
     return res.status(200).json({ succes:true, message: "Comment Added Successfully!" });
@@ -28,6 +43,23 @@ async function addComment(req, res) {
     return res.status(500).json({ message: error.message });
   }
 }
+
+function collectDescendantCommentIds(commentId, childrenByParent) {
+  const stack = [commentId];
+  const all = new Set([commentId]);
+  while (stack.length) {
+    const current = stack.pop();
+    const children = childrenByParent.get(current) || [];
+    for (const childId of children) {
+      if (!all.has(childId)) {
+        all.add(childId);
+        stack.push(childId);
+      }
+    }
+  }
+  return Array.from(all);
+}
+
 async function deleteComment(req, res) {
   try {
     const authHeader = req.headers.authorization;
@@ -35,9 +67,9 @@ async function deleteComment(req, res) {
     const decodedUser = decodeJWT(token);
     const userId = decodedUser.id;
 
-    const { id } = req.params; // comment id
+    const { commentId } = req.params; // comment id
 
-    const comment = await Comment.findById(id).populate({
+    const comment = await Comment.findById(commentId).populate({
       path: "blog",
       select: "creator"
     });
@@ -55,9 +87,27 @@ async function deleteComment(req, res) {
     }
 
     await Blog.findByIdAndUpdate(comment.blog._id, {
+      // will pull descendants below too
       $pull: { comments: comment._id }
     });
-    await Comment.findByIdAndDelete(id);
+
+    const allComments = await Comment.find({ blog: comment.blog._id }).select("_id parentComment");
+    const childrenByParent = new Map();
+    for (const c of allComments) {
+      const parent = c.parentComment ? c.parentComment.toString() : null;
+      if (!parent) continue;
+      const key = parent;
+      const arr = childrenByParent.get(key) || [];
+      arr.push(c._id.toString());
+      childrenByParent.set(key, arr);
+    }
+
+    const toDeleteIds = collectDescendantCommentIds(comment._id.toString(), childrenByParent);
+
+    await Blog.findByIdAndUpdate(comment.blog._id, {
+      $pull: { comments: { $in: toDeleteIds } }
+    });
+    await Comment.deleteMany({ _id: { $in: toDeleteIds } });
 
     return res.status(200).json({
       success: true,
@@ -75,14 +125,14 @@ async function editComment(req, res) {
     const decodedUser = decodeJWT(token);
     const userId = decodedUser.id;
 
-    const { id } = req.params;
+    const { commentId } = req.params;
     const { comment } = req.body; // same key as addComment
 
     if (!comment) {
       return res.status(400).json({ message: "Updated comment is required!" });
     }
 
-    const existingComment = await Comment.findById(id);
+    const existingComment = await Comment.findById(commentId);
 
     if (!existingComment) {
       return res.status(404).json({ message: "Comment Not Found!" });
@@ -93,7 +143,7 @@ async function editComment(req, res) {
     }
 
     const updated = await Comment.findByIdAndUpdate(
-      id,
+      commentId,
       { comment: comment },
       { new: true, runValidators: true }
     );
@@ -114,20 +164,20 @@ async function likeComment(req, res) {
     const token = authHeader.split(" ")[1];
     const decodedUser = decodeJWT(token);
     const userId = decodedUser.id;
-    const { id } = req.params;
+    const { commentId } = req.params;
 
-    const comment = await Comment.findById(id);
+    const comment = await Comment.findById(commentId);
 
     if (!comment) {
       return res.status(404).json({ message: "Comment not found" });
     }
     if(!comment.likes.includes(userId)){
-      await Comment.findByIdAndUpdate(id,{$push:{likes:userId}})
+      await Comment.findByIdAndUpdate(commentId,{$push:{likes:userId}})
       return res.status(200).json({
       message: "Comment Liked!"
     });
     }else{
-      await Blog.findByIdAndUpdate(id,{$pull:{likes:userId}})
+      await Comment.findByIdAndUpdate(commentId,{$pull:{likes:userId}})
       return res.status(200).json({
       message: "Comment Disliked!"
     });

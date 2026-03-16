@@ -5,6 +5,12 @@ const commentSchema = mongoose.Schema({
         type:String,
         required:true
     },
+
+    parentComment: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Comment",
+        default: null
+    },
     
     blog:{
         type: mongoose.Schema.Types.ObjectId,

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { data, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {toast} from 'react-hot-toast'
 import axios from 'axios'
 
 function AuthForm({ type }) {
   const isSignup = type === "signup";
+  const navigate = useNavigate();
 
   const [userData, setUserData] = useState({
     name: "",
@@ -25,11 +26,11 @@ function AuthForm({ type }) {
 
   try {
     
-    const res = await axios.post(url,userData)
+    const res = await axios.post(url, payload)
     localStorage.setItem("user",JSON.stringify(res.data.user))
     localStorage.setItem("token",JSON.stringify(res.data.token))
     toast.success(res.data.message);
-    console.log(res);
+    navigate("/");
 
   } catch (error) {
     toast.error(error.response.data.message);
@@ -39,12 +40,12 @@ function AuthForm({ type }) {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-6"
+        className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-8 flex flex-col gap-6 border border-transparent dark:border-gray-800"
       >
-        <h1 className="text-3xl font-bold text-center text-gray-800">
+        <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-gray-50">
           {isSignup ? "Sign Up" : "Sign In"}
         </h1>
 
@@ -56,7 +57,7 @@ function AuthForm({ type }) {
             onChange={(e) =>
               setUserData((prev) => ({ ...prev, name: e.target.value }))
             }
-            className="w-full rounded-lg border border-gray-300 p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 p-3 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-950 dark:text-gray-100"
           />
         )}
 
@@ -67,7 +68,7 @@ function AuthForm({ type }) {
           onChange={(e) =>
             setUserData((prev) => ({ ...prev, email: e.target.value }))
           }
-          className="w-full rounded-lg border border-gray-300 p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 p-3 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-950 dark:text-gray-100"
         />
 
         <input
@@ -77,7 +78,7 @@ function AuthForm({ type }) {
           onChange={(e) =>
             setUserData((prev) => ({ ...prev, password: e.target.value }))
           }
-          className="w-full rounded-lg border border-gray-300 p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 p-3 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-950 dark:text-gray-100"
         />
 
         <button
@@ -87,7 +88,7 @@ function AuthForm({ type }) {
           {isSignup ? "Register" : "Login"}
         </button>
 
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
           {isSignup ? (
             <>
               Already have an account?{" "}

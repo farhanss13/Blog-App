@@ -1,17 +1,1 @@
-import {Link, Outlet } from "react-router-dom";
-
-function NavBar() {
-  return (
-    <>
-      <div className="bg-gray-600 h-12 text-white flex items-center px-4">
-        <Link to ="/">Blog App</Link>
-      </div>
-
-      <div className="p-4">
-        <Outlet />
-      </div>
-    </>
-  );
-}
-
-export default NavBar;
+import { Link, Outlet, useNavigate } from "react-router-dom"; import { useEffect, useState } from "react"; import logoBlack from "../assets/Logo Full Black.png"; import logoWhite from "../assets/Logo Full White.png"; function NavBar() { const navigate = useNavigate(); const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light"); const isAuthed = Boolean(localStorage.getItem("token")); const user = JSON.parse(localStorage.getItem("user") || "null"); const logo = theme === "dark" ? logoWhite : logoBlack; useEffect(() => { document.documentElement.classList.toggle("dark", theme === "dark"); localStorage.setItem("theme", theme); }, [theme]); function logout() { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/signin"); } return (<> <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center px-6"> <div className="w-full max-w-6xl mx-auto flex items-center justify-between"> <Link to="/" className="flex items-center"> <img src={logo} alt="BlogSphere" className="h-10 w-auto object-contain hover:scale-105 transition" /> </Link> <div className="flex items-center gap-3"> <button onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))} className="px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition text-sm" type="button" > {theme === "dark" ? "Light" : "Dark"} </button> {isAuthed ? (<> <button type="button" onClick={() => navigate("/profile")} className="flex items-center gap-2 text-sm px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition" > <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden"> {user?.avatar && (<img src={user.avatar} alt={user.name || "avatar"} className="w-full h-full object-cover" />)} </div> <span>{user?.name || "Profile"}</span> </button> <Link to="/add-blog" className="px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm" > New blog </Link> <button onClick={logout} className="px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm" type="button" > Logout </button> </>) : (<> <Link to="/signin" className="px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm" > Sign in </Link> <Link to="/signup" className="px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm" > Sign up </Link> </>)} </div> </div> </div> <div className="p-4 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]"> <Outlet /> </div> </>); } export default NavBar;
