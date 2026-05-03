@@ -37,6 +37,10 @@ async function createUser(req, res) {
         name: newUser.name,
         email: newUser.email,
         avatar: newUser.avatar,
+        occupation: newUser.occupation,
+        bio: newUser.bio,
+        location: newUser.location,
+        website: newUser.website,
       },
       token,  
     });
@@ -81,6 +85,10 @@ async function login(req, res) {
         name: user.name,
         email: user.email,
         avatar: user.avatar,
+        occupation: user.occupation,
+        bio: user.bio,
+        location: user.location,
+        website: user.website,
       },
       token,
     });
@@ -155,7 +163,7 @@ async function updateProfile(req, res) {
     }
 
     const userId = decoded.id;
-    const { name } = req.body;
+    const { name, occupation, bio, location, website } = req.body;
     const file = req.file;
 
     const user = await User.findById(userId);
@@ -164,9 +172,11 @@ async function updateProfile(req, res) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    if (name !== undefined) {
-      user.name = name;
-    }
+    if (name !== undefined) user.name = name;
+    if (occupation !== undefined) user.occupation = occupation;
+    if (bio !== undefined) user.bio = bio;
+    if (location !== undefined) user.location = location;
+    if (website !== undefined) user.website = website;
 
     if (file) {
       const { secure_url, public_id } = await uploadImage(file.path);
@@ -188,6 +198,10 @@ async function updateProfile(req, res) {
         name: user.name,
         email: user.email,
         avatar: user.avatar,
+        occupation: user.occupation,
+        bio: user.bio,
+        location: user.location,
+        website: user.website,
       },
     });
   } catch (error) {

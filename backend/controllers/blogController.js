@@ -87,20 +87,20 @@ async function getBlogsById(req, res) {
         populate: [
           {
             path: "user",
-            select: "name email",
+            select: "name email avatar occupation",
           },
           {
             path: "parentComment",
             populate: {
               path: "user",
-              select: "name email",
+              select: "name email avatar occupation",
             },
           },
         ],
       })
       .populate({
         path: "creator",
-        select: "name email",
+        select: "-password",
       });
     return res.status(200).json({ message: "Blog Fetched Successfully", blog });
   } catch (error) {

@@ -16,6 +16,27 @@ const userSchema = mongoose.Schema({
     type: String,
     default: null,
   },
+  occupation: {
+    type: String,
+    default: "",
+    trim: true,
+  },
+  bio: {
+    type: String,
+    default: "",
+    trim: true,
+    maxlength: 500,
+  },
+  location: {
+    type: String,
+    default: "",
+    trim: true,
+  },
+  website: {
+    type: String,
+    default: "",
+    trim: true,
+  },
   blogs:[
     {
       type:mongoose.Schema.Types.ObjectId,
